@@ -35,8 +35,11 @@ def main():
     from tract_querier.tract_math import TractMathWrongArgumentsError
 
     usage = r"""
-    usage: %(prog)s <tract1.vtk> ... <tractN.vtk> operation <operation parameter1> ... <operation parameterN> <output_tract.vtk>
+    usage: %(prog)s <tract1.vtk> ... <tractN.vtk> operation <operation parameter1> ... <operation parameterN> <output_tract.vtk> \
+                      [ optional flags ]
 
+    optional flags:  Always start with "--" and are considered as boolean flags
+        --useFileNamesAsIndex  (when creating table outputs, use input file names instead of index id)
     Available operations:
     """
 
@@ -72,7 +75,8 @@ def main():
         tractography = []
         try:
             for f in args.tractographies:
-                tractography.append(tractography_from_files(f.name))
+                # For each tractography file, pass a tuple of (tractography filename, tractography instance) to tractography list.
+                tractography.append((f.name,tractography_from_files(f.name)))
         except IOError as e:
             print >>sys.stderr, "Error reading file ", f.name, "(%s)" % repr(e)
 
@@ -82,7 +86,7 @@ def main():
         except TractMathWrongArgumentsError, e:
             parser.error('\n\n' + str(e))
         except TypeError:
-            parser.error("\n\nWrong number of parameters for the operation")
+            parser.error("\n\nError: Wrong number of parameters for the operation")
     else:
         parser.error("\n\nOperation not found")
 

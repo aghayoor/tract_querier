@@ -28,6 +28,13 @@ def tract_math_operation(help_text, needs_one_tract=True):
 
     def internal_decorator(func):
         def wrapper(*args):
+            # find optional flags and put them at the beginning of args
+            optional_flags = list()
+            while args[-1].startswith("--"):
+              optional_flags.append(args[-1])
+              args=args[:-1]
+            args = (optional_flags,) + args
+
             total_args = len(args)
             argspec = inspect.getargspec(func)
             func_total_args = len(argspec.args)

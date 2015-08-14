@@ -15,10 +15,15 @@ from ..tractography import Tractography, tractography_to_file, tractography_from
 
 
 @tract_math_operation(': counts the number of tracts', needs_one_tract=False)
-def count(tractographies):
+def count(optional_flags, tractographies):
     results = {'tract file #': [], 'number of tracts': []}
-    for i, tractography in enumerate(tractographies):
-        results['tract file #'].append(i)
+    for i, tractographyPair in enumerate(tractographies):
+        tractographyName = tractographyPair[0]
+        tractography = tractographyPair[1]
+        if "--useFileNamesAsIndex" in optional_flags:
+          results['tract file #'].append(tractographyName)
+        else:
+          results['tract file #'].append(i)
         results['number of tracts'].append(len(tractography.tracts()))
     return results
 
@@ -134,7 +139,8 @@ def scalar_mean_std(tractography, scalar):
 
 
 @tract_math_operation('<scalar>: calculates mean and std of a scalar quantity that has been averaged along each tract', needs_one_tract=False)
-def scalar_per_tract_mean_std(tractographies, scalar):
+def scalar_per_tract_mean_std(optional_flags,tractographies, scalar):
+    import os
     try:
 
         results = OrderedDict((
@@ -142,7 +148,9 @@ def scalar_per_tract_mean_std(tractographies, scalar):
             ('per tract distance weighted mean %s' % scalar, []),
             ('per tract distance weighted std %s' % scalar, [])
         ))
-        for j, tractography in enumerate(tractographies):
+        for j, tractographyPair in enumerate(tractographies):
+            tractographyName = tractographyPair[0]
+            tractography = tractographyPair[1]
             scalars = tractography.tracts_data()[scalar]
             weighted_scalars = numpy.empty((len(tractography.tracts()), 2))
             for i, t in enumerate(tractography.tracts()):
@@ -154,7 +162,10 @@ def scalar_per_tract_mean_std(tractographies, scalar):
                 weighted_scalars[i, 1] = length
             mean = numpy.average(weighted_scalars[:, 0], weights=weighted_scalars[:, 1])
             std = numpy.average((weighted_scalars[:, 0] - mean) ** 2, weights=weighted_scalars[:, 1])
-            results[results.keys()[0]].append(j)
+            if "--useFileNamesAsIndex" in optional_flags:
+              results[results.keys()[0]].append(tractographyName)
+            else:
+              results[results.keys()[0]].append(j)
             results[results.keys()[1]].append(float(mean))
             results[results.keys()[2]].append(float(std))
 
@@ -445,15 +456,16 @@ def tract_generate_population_probability_map(tractographies, image, smoothing=0
     image = nibabel.load(image)
     smoothing = float(smoothing)
 
-    if isinstance(tractographies, Tractography):
+    # tractographies includes tuples of (tractography filename, tractography instance)
+    if isinstance(tractographies[1], Tractography):
         tractographies = [tractographies]
 
-    prob_map = tract_mask(image, tractographies[0]).astype(float)
+    prob_map = tract_mask(image, tractographies[0][1]).astype(float)
     if smoothing > 0:
         prob_map = ndimage.gaussian_filter(prob_map, smoothing)
 
     for tract in tractographies[1:]:
-        aux_map = tract_mask(image, tract)
+        aux_map = tract_mask(image, tract[1])
         if smoothing > 0:
             aux_map = ndimage.gaussian_filter(aux_map, smoothing)
         prob_map += aux_map
@@ -467,12 +479,12 @@ def tract_generate_population_probability_map(tractographies, image, smoothing=0
 def tract_generate_probability_map(tractographies, image, file_output):
     image = nibabel.load(image)
 
-    prob_map = tract_probability_map(image, tractographies[0]).astype(float)
+    prob_map = tract_probability_map(image, tractographies[0][1]).astype(float)
 
     for tract in tractographies[1:]:
-        if len(tract.tracts()) == 0:
+        if len(tract[1].tracts()) == 0:
             continue
-        new_prob_map = tract_mask(image, tract)
+        new_prob_map = tract_mask(image, tract[1])
         prob_map = prob_map + new_prob_map - (prob_map * new_prob_map)
 
     return SpatialImage(prob_map, image.get_affine())
@@ -489,22 +501,22 @@ def tract_strip(tractography, file_output):
 def tract_merge(tractographies, file_output):
     all_tracts = []
     all_data = {}
-    keys = [set(t.tracts_data().keys()) for t in tractographies]
+    keys = [set(t[1].tracts_data().keys()) for t in tractographies]
     common_keys = keys[0].intersection(*keys[1:])
 
-    affine = tractographies[0].extra_args.get('affine', None)
-    image_dims = tractographies[0].extra_args.get('image_dims', None)
+    affine = tractographies[0][1].extra_args.get('affine', None)
+    image_dims = tractographies[0][1].extra_args.get('image_dims', None)
 
     for tract in tractographies:
-        tracts = tract.tracts()
-        if affine is not None and 'affine' in tract.extra_args:
-            if (tract.affine != affine).any():
+        tracts = tract[1].tracts()
+        if affine is not None and 'affine' in tract[1].extra_args:
+            if (tract[1].affine != affine).any():
                 affine = None
-        if image_dims is not None and 'image_dims' in tract.extra_args:
-            if (tract.image_dims != image_dims).any():
+        if image_dims is not None and 'image_dims' in tract[1].extra_args:
+            if (tract[1].image_dims != image_dims).any():
                 image_dims = None
-        all_tracts += tract.tracts()
-        data = tract.tracts_data()
+        all_tracts += tract[1].tracts()
+        data = tract[1].tracts_data()
         for k in common_keys:
             if len(data[k]) == len(tracts):
                 if k not in all_data:
