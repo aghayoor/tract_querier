@@ -550,11 +550,11 @@ def tract_kappa(optional_flags, tractography, resolution, *other_tracts):
         N = (all_voxels.max(0) - all_voxels.min(0)).prod()
         pp = len(voxels.intersection(voxels1)) * 1.
         pn = len(voxels.difference(voxels1)) * 1.
-        numpy = len(voxels1.difference(voxels)) * 1.
-        nn = N - pp - pn - numpy
+        nump = len(voxels1.difference(voxels)) * 1.
+        nn = N - pp - pn - nump
         observed_agreement = (pp + nn) / N
         chance_agreement = (
-            (pp + pn) * (pp + numpy) + (nn + numpy) * (nn + pn)) / (N * N)
+            (pp + pn) * (pp + nump) + (nn + nump) * (nn + pn)) / (N * N)
 
         k = (observed_agreement - chance_agreement) / (1 - chance_agreement)
 
@@ -585,11 +585,11 @@ def tract_kappa_volume(optional_flags, tractography, volume, threshold, resoluti
         N = (all_voxels.max(0) - all_voxels.min(0)).prod()
         pp = len(voxels.intersection(voxels1)) * 1.
         pn = len(voxels.difference(voxels1)) * 1.
-        numpy = len(voxels1.difference(voxels)) * 1.
-        nn = N - pp - pn - numpy
+        nump = len(voxels1.difference(voxels)) * 1.
+        nn = N - pp - pn - nump
         observed_agreement = (pp + nn) / N
         chance_agreement = (
-            (pp + pn) * (pp + numpy) + (nn + numpy) * (nn + pn)) / (N * N)
+            (pp + pn) * (pp + nump) + (nn + nump) * (nn + pn)) / (N * N)
 
         k = (observed_agreement - chance_agreement) / (1 - chance_agreement)
 
